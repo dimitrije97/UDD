@@ -139,10 +139,12 @@ public class SearchController {
         @RequestParam(value = "keywords", required = false) String keywords,
         @RequestParam(value = "writer", required = false) String writer,
         @RequestParam(value = "genres", required = false) String genres,
+        @RequestParam(value = "content", required = false) String content,
         @RequestParam(value = "titleOperation", required = false) String titleOperation,
         @RequestParam(value = "keywordsOperation", required = false) String keywordsOperation,
         @RequestParam(value = "writerOperation", required = false) String writerOperations,
         @RequestParam(value = "genresOperation", required = false) String genresOperation,
+        @RequestParam(value = "contentOperation", required = false) String contentOperation,
         @RequestParam(value = "searchType") SearchType searchType) throws Exception {
 
         List<RequiredHighlight> rh = new ArrayList<RequiredHighlight>();
@@ -150,7 +152,7 @@ public class SearchController {
         BoolQueryBuilder builder = QueryBuilders.boolQuery();
 
         if (title != null) {
-            QueryBuilder queryTitle = buildQuery(searchType, "title", title);
+            QueryBuilder queryTitle = buildQuery(searchType, "title", title.toLowerCase());
             if (titleOperation.equals("AND")) {
                 builder.must(queryTitle);
             } else if (titleOperation.equals("NOT")) {
@@ -162,7 +164,7 @@ public class SearchController {
         }
 
         if (keywords != null) {
-            QueryBuilder queryKeywords = buildQuery(searchType, "keywords", keywords);
+            QueryBuilder queryKeywords = buildQuery(searchType, "keywords", keywords.toLowerCase());
             if (keywordsOperation.equals("AND")) {
                 builder.must(queryKeywords);
             } else if (keywordsOperation.equals("NOT")) {
@@ -174,7 +176,7 @@ public class SearchController {
         }
 
         if (writer != null) {
-            QueryBuilder queryWriter = buildQuery(searchType, "writer", writer);
+            QueryBuilder queryWriter = buildQuery(searchType, "writer", writer.toLowerCase());
             if (writerOperations.equals("AND")) {
                 builder.must(queryWriter);
             } else if (writerOperations.equals("NOT")) {
@@ -186,7 +188,7 @@ public class SearchController {
         }
 
         if (genres != null) {
-            QueryBuilder queryGenres = buildQuery(searchType, "genres", genres);
+            QueryBuilder queryGenres = buildQuery(searchType, "genres", genres.toLowerCase());
             if (genresOperation.equals("AND")) {
                 builder.must(queryGenres);
             } else if (genresOperation.equals("NOT")) {
@@ -195,6 +197,18 @@ public class SearchController {
                 builder.should(queryGenres);
             }
             rh.add(new RequiredHighlight("genres", genres));
+        }
+
+        if (content != null) {
+            QueryBuilder queryContent = QueryBuilders.queryStringQuery(content.toLowerCase());
+            if (contentOperation.equals("AND")) {
+                builder.must(queryContent);
+            } else if (contentOperation.equals("NOT")) {
+                builder.mustNot(queryContent);
+            } else {
+                builder.should(queryContent);
+            }
+            rh.add(new RequiredHighlight("content", content));
         }
 
         List<ResultData> results = searchService.getResults(builder, rh);
