@@ -23,7 +23,7 @@ public class BookController {
 
     @ResponseStatus(code = HttpStatus.CREATED)
     @PostMapping
-    public void createBook(@RequestParam("files") List<MultipartFile> files, @RequestParam("title") String title,
+    public void createBook(@RequestParam("files") MultipartFile files, @RequestParam("title") String title,
         @RequestParam("keyWords") String keyWords, @RequestParam("writerId") String writerId,
         @RequestParam("genresIds") String genresIds) throws IOException {
         bookService.createBook(files, title, keyWords, writerId, genresIds);

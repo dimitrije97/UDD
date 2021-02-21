@@ -6,6 +6,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface IBookService {
 
-    void createBook(List<MultipartFile> files, String title, String keyWords, String writerId, String genresIds)
+    void createBook(MultipartFile files, String title, String keyWords, String writerId, String genresIds)
         throws IOException;
 }

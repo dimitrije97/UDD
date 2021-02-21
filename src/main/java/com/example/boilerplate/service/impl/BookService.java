@@ -21,6 +21,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -56,7 +57,7 @@ public class BookService implements IBookService {
     }
 
     @Override
-    public void createBook(List<MultipartFile> files, String title, String keyWords, String writerId, String genresIds)
+    public void createBook(MultipartFile files, String title, String keyWords, String writerId, String genresIds)
         throws IOException {
         Book book = new Book();
         book.setTitle(title);
@@ -69,8 +70,10 @@ public class BookService implements IBookService {
         //TODO: check if there is only one file for the book
 
         int i = 1;
-        MultipartFile array[] = new MultipartFile[files.size()];
-        for (MultipartFile file : files) {
+        MultipartFile array[] = new MultipartFile[1];
+        List<MultipartFile> filesList = new ArrayList<>();
+        filesList.add(files);
+        for (MultipartFile file : filesList) {
             array[i - 1] = file;
             try {
                 byte[] bytes = file.getBytes();
@@ -93,7 +96,7 @@ public class BookService implements IBookService {
                 Path path = Paths.get(newFile + "\\" + file.getOriginalFilename());
                 Files.write(path, bytes);
 
-                if (i == files.size()) {
+                if (i == filesList.size()) {
                     book.setPath(path.toString());
                     break;
                 }
