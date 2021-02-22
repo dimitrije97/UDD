@@ -1,6 +1,8 @@
 package com.example.boilerplate.service.impl;
 
 import com.example.boilerplate.dto.elasticSearch.UploadModel;
+import com.example.boilerplate.dto.plagiator.PaperDTO;
+import com.example.boilerplate.dto.plagiator.ReturnDTO;
 import com.example.boilerplate.entity.Book;
 import com.example.boilerplate.entity.Genre;
 import com.example.boilerplate.entity.User;
@@ -24,7 +26,16 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -173,5 +184,26 @@ public class BookService implements IBookService {
                 }
             }
         }
+    }
+
+    @Override
+    public ResponseEntity<ReturnDTO> checkPlagiarism(PaperDTO paperDTO) throws IOException {
+        RestTemplate restTemplate = new RestTemplate();
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+
+        ByteArrayResource fileAsResource = new ByteArrayResource(paperDTO.getFile().getBytes()){
+            @Override
+            public String getFilename(){
+                return paperDTO.getFile().getOriginalFilename();
+            }
+        };
+        body.add("file",fileAsResource);
+
+        HttpHeaders requestHeaders = new HttpHeaders();
+        requestHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, requestHeaders);
+
+        return restTemplate.postForEntity("http://localhost:8000/api/file/upload/new", requestEntity, ReturnDTO.class);
     }
 }
