@@ -1,5 +1,7 @@
 package com.example.boilerplate.controller.elasticSearch;
 
+import com.byteowls.jopencage.JOpenCageGeocoder;
+import com.byteowls.jopencage.model.JOpenCageForwardRequest;
 import com.example.boilerplate.dto.elasticSearch.AdvancedQuery;
 import com.example.boilerplate.dto.elasticSearch.RequiredHighlight;
 import com.example.boilerplate.dto.elasticSearch.ResultData;
@@ -9,6 +11,10 @@ import com.example.boilerplate.entity.elasticSearch.IndexUnit;
 import com.example.boilerplate.repository.elasticSearch.IIndexUnitRepository;
 import com.example.boilerplate.service.elasticSearch.SearchService;
 import com.example.boilerplate.util.enums.SearchType;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,12 +23,17 @@ import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -37,6 +48,34 @@ public class HelperController {
         IIndexUnitRepository indexUnitRepository) {
         this.searchService = searchService;
         this.indexUnitRepository = indexUnitRepository;
+    }
+
+    @PostMapping("/download")
+    public ResponseEntity downloadFileFromLocal(@RequestParam(name = "filename") String filename) throws IOException {
+        Path path = Paths.get(filename);
+
+
+        Resource resource = null;
+        try {
+            resource = new UrlResource(path.toUri());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType("application/pdf"))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+            .body(resource);
+    }
+
+    @GetMapping("/geodb")
+    public void geoDB() throws Exception {
+        var jOpenCageGeocoder = new JOpenCageGeocoder("b0fc7df42d5e4b73ac60115bb7e0c7db");
+        var jOpenCageForwardRequest = new JOpenCageForwardRequest("Novi Sad, Serbia");
+        jOpenCageForwardRequest.setMinConfidence(1);
+        jOpenCageForwardRequest.setNoAnnotations(false);
+        jOpenCageForwardRequest.setNoDedupe(true);
+        var jOpenCageResponse = jOpenCageGeocoder.forward(jOpenCageForwardRequest);
+        System.out.println(jOpenCageResponse.getResults().get(0).getGeometry().getLat() + " " + jOpenCageResponse.getResults().get(0).getGeometry().getLat());
     }
 
     @PostMapping("/term")

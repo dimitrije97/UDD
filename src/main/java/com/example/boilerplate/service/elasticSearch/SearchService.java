@@ -1,8 +1,17 @@
 package com.example.boilerplate.service.elasticSearch;
 
+import com.byteowls.jopencage.JOpenCageGeocoder;
+import com.byteowls.jopencage.model.JOpenCageForwardRequest;
+import com.byteowls.jopencage.model.JOpenCageResponse;
 import com.example.boilerplate.dto.elasticSearch.RequiredHighlight;
 import com.example.boilerplate.dto.elasticSearch.ResultData;
+import com.example.boilerplate.dto.response.UserResponse;
+import com.example.boilerplate.entity.Reviewer;
+import com.example.boilerplate.entity.User;
+import com.example.boilerplate.entity.Writer;
 import com.example.boilerplate.entity.elasticSearch.IndexUnit;
+import com.example.boilerplate.repository.IReviewerRepository;
+import com.example.boilerplate.repository.IUserRepository;
 import com.example.boilerplate.repository.elasticSearch.IIndexUnitRepository;
 import com.example.boilerplate.util.enums.SearchType;
 import java.util.ArrayList;
@@ -19,8 +28,15 @@ public class SearchService {
 
     private final IIndexUnitRepository indexUnitRepository;
 
-    public SearchService(IIndexUnitRepository indexUnitRepository) {
+    private final IUserRepository userRepository;
+
+    private final IReviewerRepository reviewerRepository;
+
+    public SearchService(IIndexUnitRepository indexUnitRepository,
+        IUserRepository userRepository, IReviewerRepository reviewerRepository) {
         this.indexUnitRepository = indexUnitRepository;
+        this.userRepository = userRepository;
+        this.reviewerRepository = reviewerRepository;
     }
 
     public List<ResultData> getResults(QueryBuilder query,
@@ -121,6 +137,60 @@ public class SearchService {
         List<ResultData> results = getResults(builder, rh);
 
         return results;
+    }
+
+    public List<UserResponse> getAvailableReviewers(String email) throws Exception {
+        User user = userRepository.findOneByEmail(email).get();
+        Writer writer = user.getWriter();
+
+        List<UserResponse> userResponses = new ArrayList<>();
+
+        JOpenCageGeocoder jOpenCageGeocoder = new JOpenCageGeocoder("b0fc7df42d5e4b73ac60115bb7e0c7db");
+        JOpenCageForwardRequest jOpenCageForwardRequest = new JOpenCageForwardRequest(
+            writer.getUser().getCity() + ", " + writer.getUser().getCountry());
+        jOpenCageForwardRequest.setMinConfidence(1);
+        jOpenCageForwardRequest.setNoAnnotations(false);
+        jOpenCageForwardRequest.setNoDedupe(true);
+        JOpenCageResponse jOpenCageResponse = jOpenCageGeocoder.forward(jOpenCageForwardRequest);
+        double writersLat = jOpenCageResponse.getResults().get(0).getGeometry().getLat();
+        double writersLng = jOpenCageResponse.getResults().get(0).getGeometry().getLng();
+        System.out
+            .println("Writers lat and lng for " + writer.getUser().getCity() + ": " + writersLat + ", " + writersLng);
+        for (Reviewer reviewer : reviewerRepository.findAll()) {
+            jOpenCageForwardRequest = new JOpenCageForwardRequest(
+                reviewer.getUser().getCity() + ", " + reviewer.getUser().getCountry());
+            jOpenCageForwardRequest.setMinConfidence(1);
+            jOpenCageForwardRequest.setNoAnnotations(false);
+            jOpenCageForwardRequest.setNoDedupe(true);
+            jOpenCageResponse = jOpenCageGeocoder.forward(jOpenCageForwardRequest);
+            double reviewerLat = jOpenCageResponse.getResults().get(0).getGeometry().getLat();
+            double reviewersLng = jOpenCageResponse.getResults().get(0).getGeometry().getLng();
+            System.out.println(
+                "Reviewers lat and lng for " + reviewer.getUser().getCity() + ": " + reviewerLat + ", " + reviewersLng);
+
+
+            int R = 6371;
+            double latDistance = Math.toRadians(reviewerLat - writersLat);
+            double lonDistance = Math.toRadians(reviewersLng - writersLng);
+            double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(writersLat)) * Math.cos(Math.toRadians(reviewerLat))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            double distance = R * c; // convert to meters
+
+            System.out.println("Distance in km: " +  distance);
+
+            if(distance > 100) {
+                UserResponse userResponse = new UserResponse();
+                userResponse.setId(reviewer.getUser().getId());
+                userResponse.setEmail(reviewer.getUser().getEmail());
+                userResponse.setCity(reviewer.getUser().getCity());
+                userResponse.setCountry(reviewer.getUser().getCountry());
+                userResponses.add(userResponse);
+            }
+        }
+
+        return userResponses;
     }
 
     public static QueryBuilder buildQuery(SearchType queryType, String field, String value)

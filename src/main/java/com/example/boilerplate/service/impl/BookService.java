@@ -121,8 +121,7 @@ public class BookService implements IBookService {
 
         try {
             UploadModel uploadModel = new UploadModel(title, keyWords, stringBuilder.toString(),
-                writer.getUser().getFirstName() + " " + writer.getUser().getLastName(),
-                array);
+                writer.getUser().getEmail(), array);
             indexUploadedFile(uploadModel);
         } catch (IOException e) {
             e.printStackTrace();
@@ -169,7 +168,7 @@ public class BookService implements IBookService {
                 indexUnit.setGenres(model.getGenres());
                 indexUnit.setWriter(model.getWriter());
                 boolean flag = indexerService.add(indexUnit);
-                if(flag){
+                if (flag) {
                     indexUnitRepository.save(indexUnit);
                 }
             }
